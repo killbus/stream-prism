@@ -1,0 +1,10 @@
+target/
+.git/
+.github/
+.vscode/
+.cursor/
+.trellis/
+providers/
+README.md
+SPECS.md
+Dockerfile

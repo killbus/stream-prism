@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=../schemas/provider.schema.json
+id: "bilibili"
+version: "1.0.0"
+description: "Bilibili Provider mapping via ytdlp-http-wrapper"
+endpoint: "http://localhost:8080"
+priority: 100
+
+capabilities:
+  url_patterns:
+    - "^https?://(www\\.)?bilibili\\.com/.*"
+    - "^https?://(space\\.)?bilibili\\.com/.*"
+
+actions:
+  fetch_feed:
+    path: "/run"
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+    payload:
+      args:
+        - "--flat-playlist"
+        - "--dump-single-json"
+        - "{{target_url}}"
+      timeout_seconds: 30
+
+  resolve_stream:
+    path: "/run"
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+    payload:
+      args:
+        - "-g"
+        - "-f"
+        - "best[ext=mp4]/best"
+        - "{{target_url}}"
+      timeout_seconds: 15
+
+response_mapping:
+  unpack_field: "$.stdout"
+  feed:
+    id: "$.id"
+    title: "$.title"
+    description: "$.description"
+    author: "$.uploader"
+    link: "$.webpage_url"
+    cover_url: "$.thumbnails[0].url"
+    items_path: "$.entries"
+  item:
+    id: "$.id"
+    title: "$.title"
+    description: "$.description"
+    pub_date: "$.timestamp"
+    duration: "$.duration"
+    original_url: "$.webpage_url"
+    thumbnail_url: "$.thumbnail"
+
+delivery:
+  mode: "redirect"
+  headers:
+    Referer: "https://www.bilibili.com"

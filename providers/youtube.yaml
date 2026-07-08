@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=../schemas/provider.schema.json
+id: "youtube"
+version: "1.0.0"
+description: "YouTube Provider mapping via ytdlp-http-wrapper"
+endpoint: "http://localhost:8080"
+priority: 100
+
+capabilities:
+  url_patterns:
+    - "^https?://(www\\.)?youtube\\.com/.*"
+    - "^https?://youtu\\.be/.*"
+
+actions:
+  fetch_feed:
+    path: "/run"
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+    payload:
+      args:
+        - "--cookies"
+        - "/data/yt.txt"
+        - "--flat-playlist"
+        - "--dump-single-json"
+        - "{{target_url}}"
+      timeout_seconds: 30
+
+  resolve_stream:
+    path: "/run"
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+    payload:
+      args:
+        - "--cookies"
+        - "/data/yt.txt"
+        - "-g"
+        - "-f"
+        - "best[ext=mp4]/best"
+        - "{{target_url}}"
+      timeout_seconds: 15
+
+response_mapping:
+  unpack_field: "$.stdout"
+  feed:
+    id: "$.id"
+    title: "$.title"
+    description: "$.description"
+    author: "$.uploader"
+    link: "$.webpage_url"
+    cover_url: "$.thumbnails[0].url"
+    items_path: "$.entries"
+  item:
+    id: "$.id"
+    title: "$.title"
+    description: "$.description"
+    pub_date: "$.timestamp"
+    duration: "$.duration"
+    original_url: "$.webpage_url"
+    thumbnail_url: "$.thumbnail"
+
+delivery:
+  mode: "redirect"

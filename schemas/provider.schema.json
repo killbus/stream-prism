@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProviderManifest",
+  "description": "Schema for StreamPrism Provider Manifest configurations",
+  "type": "object",
+  "required": [
+    "id",
+    "version",
+    "endpoint",
+    "capabilities",
+    "actions",
+    "response_mapping"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier of the provider"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of this provider manifest (e.g., 1.0.0)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional human-readable description of what this provider does"
+    },
+    "endpoint": {
+      "type": "string",
+      "description": "Base URL endpoint of the provider's HTTP service (e.g., http://localhost:8080)"
+    },
+    "priority": {
+      "type": "integer",
+      "description": "Matching priority. Higher priority manifests are matched first. Defaults to 0.",
+      "default": 0
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["url_patterns"],
+      "properties": {
+        "url_patterns": {
+          "type": "array",
+          "description": "List of regex patterns matching target URLs this provider supports",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "object",
+      "required": ["fetch_feed", "resolve_stream"],
+      "properties": {
+        "fetch_feed": {
+          "$ref": "#/definitions/ActionConfig",
+          "description": "Action details to fetch a unified feed list"
+        },
+        "resolve_stream": {
+          "$ref": "#/definitions/ActionConfig",
+          "description": "Action details to resolve a direct media stream URL"
+        }
+      }
+    },
+    "response_mapping": {
+      "type": "object",
+      "required": ["feed", "item"],
+      "properties": {
+        "unpack_field": {
+          "type": "string",
+          "description": "Optional JSONPath to a string field containing wrapped JSON string to unpack first"
+        },
+        "feed": {
+          "type": "object",
+          "required": [
+            "id",
+            "title",
+            "description",
+            "author",
+            "link",
+            "cover_url",
+            "items_path"
+          ],
+          "properties": {
+            "id": { "type": "string", "description": "JSONPath to the feed ID" },
+            "title": { "type": "string", "description": "JSONPath to the feed title" },
+            "description": { "type": "string", "description": "JSONPath to the feed description" },
+            "author": { "type": "string", "description": "JSONPath to the feed author/uploader" },
+            "link": { "type": "string", "description": "JSONPath to the feed original page link" },
+            "cover_url": { "type": "string", "description": "JSONPath to the feed cover/channel image URL" },
+            "items_path": { "type": "string", "description": "JSONPath pointing to the list of episodes/videos" }
+          }
+        },
+        "item": {
+          "type": "object",
+          "required": [
+            "id",
+            "title",
+            "description",
+            "pub_date",
+            "duration",
+            "original_url",
+            "thumbnail_url"
+          ],
+          "properties": {
+            "id": { "type": "string", "description": "JSONPath to the episode/item ID" },
+            "title": { "type": "string", "description": "JSONPath to the episode/item title" },
+            "description": { "type": "string", "description": "JSONPath to the episode/item description" },
+            "pub_date": { "type": "string", "description": "JSONPath to the publication date timestamp (unix epoch seconds)" },
+            "duration": { "type": "string", "description": "JSONPath to the duration in seconds" },
+            "original_url": { "type": "string", "description": "JSONPath to the episode original page URL" },
+            "thumbnail_url": { "type": "string", "description": "JSONPath to the episode thumbnail image URL" }
+          }
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["redirect", "proxy"],
+          "description": "Media stream delivery mode. 'redirect' for direct HTTP 302, 'proxy' for server-proxied streaming."
+        },
+        "headers": {
+          "type": "object",
+          "description": "Optional HTTP headers to instruct smart clients or inject during requests (e.g. Referer)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ActionConfig": {
+      "type": "object",
+      "required": ["path", "method", "payload"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Subpath relative to the provider's endpoint (e.g., /run)"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE"],
+          "description": "HTTP request method"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Custom HTTP headers to include in the request",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "payload": {
+          "type": ["object", "array", "string", "number", "boolean", "null"],
+          "description": "JSON payload structure. Supports {{target_url}} macro interpolation."
+        }
+      }
+    }
+  }
+}
