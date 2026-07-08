@@ -13,7 +13,6 @@ pub struct ProviderManifest {
     pub capabilities: Capabilities,
     pub actions: Actions,
     pub response_mapping: ResponseMapping,
-    pub delivery: Option<DeliveryConfig>,
 }
 
 fn default_priority() -> i32 {
@@ -66,11 +65,4 @@ pub struct ItemMapping {
     pub duration: String,
     pub original_url: String,
     pub thumbnail_url: String,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Clone, Deserialize)]
-pub struct DeliveryConfig {
-    pub mode: String,
-    pub headers: Option<HashMap<String, String>>,
 }

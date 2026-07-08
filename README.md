@@ -1,8 +1,8 @@
 # StreamPrism
 
-StreamPrism (流光三棱镜) is a high-performance, stateless streaming media gateway and protocol converter written in Rust. 
+StreamPrism (流光三棱镜) is a stateless streaming media gateway and protocol converter written in Rust.
 
-It is designed under the **"Prism Metaphor"**: it takes a single, raw streaming source (like a YouTube/Bilibili channel or video URL) as the input "light beam", and dynamically refracts it into multiple standard protocol feeds (RSS/Podcast XML, M3U playlists, or a virtual WebDAV filesystem) without saving any media bytes to local disk.
+It is designed under the **"Prism Metaphor"**: it takes a single, raw streaming source (like a YouTube/Bilibili channel or video URL) as the input "light beam", and refracts it into standard protocol feeds (currently RSS/Podcast XML; M3U and WebDAV are planned - see [Roadmap](#roadmap)) without saving any media bytes to local disk.
 
 ```
                   ┌──────────────┐
@@ -15,24 +15,25 @@ It is designed under the **"Prism Metaphor"**: it takes a single, raw streaming 
               ╱    StreamPrism     ╲  (Declarative Core Engine)
              ╱                      ╲
             ╱╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╲
-               │          │         │
-               │ (RSS)    │ (M3U)   │ (WebDAV)
-               ▼          ▼         ▼
-          ┌────────┐ ┌────────┐ ┌────────┐
-          │Podcast │ │ IPTV / │ │Emby /  │
-          │ Reader │ │ VLC    │ │Jellyfin│
-          └────────┘ └────────┘ └────────┘
+               │               │
+               │ (RSS)         │ (M3U)
+               ▼               ▼
+          ┌────────┐     ┌──────────┐
+          │Podcast │     │ IPTV /   │
+          │ Reader │     │ VLC      │
+          └────────┘     └──────────┘
+
+  Planned: WebDAV VFS (see Roadmap).
 ```
 
 ## Key Features
 
-- **Stateless & Zero Disk Usage**: No video/audio files are downloaded or saved to disk. All media streaming links are resolved dynamically on-the-fly and routed/proxied in-memory.
-- **Dynamic Provider Manifests (Decoupled Core)**: Core engine is 100% agnostic of specific media platforms or scraper tools. It loads JSON/YAML provider specifications on startup to register URL matchers, request parameters, and response mappings.
+- **Stateless & Zero Disk Usage**: No video/audio files are downloaded or saved to disk. All media streaming links are resolved dynamically on-the-fly and proxied in-memory. **Note**: no response cache is implemented — every feed refresh re-runs the provider. Suited for single-user / low-subscriber self-hosting; for multi-subscriber deployments, consider placing a caching reverse proxy (nginx/varnish) in front.
+- **Dynamic Provider Manifests (Decoupled Core)**: Core engine loads JSON/YAML provider specifications on startup to register URL matchers, request parameters, and response mappings, remaining agnostic of specific media platforms or scraper tools.
 - **JSONPath Response Transformation**: Automatically maps custom JSON payloads from scraper services (like `ytdlp-http-wrapper` or native APIs) into a Unified Media Schema.
 - **Multi-Protocol Outputs**:
   - **RSS/Podcast Feeds**: Podcast-compliant XML feeds for Miniflux and mobile podcast apps.
   - **M3U Playlists**: Playlists compatible with Apple TV Infuse, VLC, or IPTV players.
-  - **Virtual WebDAV Directory (VFS)**: Mount virtual directories containing `.strm` stream files, `.nfo` metadata sheets, and poster images directly into Jellyfin/Emby.
 
 ## Quick Start
 
@@ -88,16 +89,16 @@ services:
     restart: unless-stopped
 
   stream-prism:
-    image: ghcr.io/killbus/stream-prism:latest # Placeholder tag
+    image: ghcr.io/killbus/stream-prism:latest
     container_name: stream-prism
     ports:
-      - "3000:3000"
+      - "8080:8080"
     volumes:
       - ./providers:/app/providers
     environment:
       - RUST_LOG=info
       - WEB_HOST=0.0.0.0
-      - WEB_PORT=3000
+      - WEB_PORT=8080
     depends_on:
       - ytdlp-wrapper
     restart: unless-stopped
@@ -107,16 +108,27 @@ services:
 
 #### RSS/Podcast Feed (Miniflux / NetNewsWire)
 ```http
-http://localhost:3000/feed/rss?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ
+http://localhost:8080/feed/rss?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ
 ```
 
 #### M3U Playlist (VLC / Apple TV Infuse)
 ```http
-http://localhost:3000/feed/m3u?url=https://www.youtube.com/@GoogleDeepMind
+http://localhost:8080/feed/m3u?url=https://www.youtube.com/@GoogleDeepMind
 ```
 
-#### WebDAV Virtual Folder (Jellyfin / Emby / Kodi)
-Add a WebDAV media library source pointing to `http://localhost:3000/webdav/`. It dynamically generates virtual `.strm` links without utilizing server storage.
+## Roadmap
+
+The following features are planned but not yet implemented (as of v0.1.0):
+
+- **WebDAV Virtual Filesystem (VFS)**: Mount virtual directories of `.strm` stream files, `.nfo` metadata sheets, and poster images into Jellyfin/Emby/Kodi (see [SPECS §6](SPECS.md#6-webdav-virtual-filesystem-vfs) for the design).
+- **Proxy Streaming Mode**: Server-side proxying instead of HTTP 302 redirect, for providers requiring custom headers or CORS handling (see [SPECS §5.2](SPECS.md#52-bilibili-proxying)).
+- **Built-in Response Cache**: In-memory TTL cache + ETag/304 support to reduce redundant provider calls (future direction beyond v0.1.0 scope).
+
+### Known Limitations
+
+- No response cache — every feed refresh re-runs the provider. Suited for single-user / low-subscriber self-hosting; for multi-subscriber deployments, place a caching reverse proxy (nginx/varnish) in front.
+- No `/health` endpoint, no graceful shutdown, no metrics — see [issue tracker](https://github.com/killbus/stream-prism/issues) for progress.
+- Single-instance design; horizontal scale-out requires manual deployment setup.
 
 ## Technical Specifications
 

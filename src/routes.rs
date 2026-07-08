@@ -13,10 +13,12 @@ use tracing::{info, error};
 use crate::provider::ProviderRegistry;
 use crate::formatter::Formatter;
 use crate::formatter::rss::RssFormatter;
+use crate::formatter::m3u::M3uFormatter;
 
 pub fn app(registry: Arc<ProviderRegistry>) -> Router {
     Router::new()
         .route("/feed/rss", get(handle_rss))
+        .route("/feed/m3u", get(handle_m3u))
         .route("/resolve", get(handle_resolve))
         .layer(TraceLayer::new_for_http())
         .with_state(registry)
@@ -51,7 +53,7 @@ async fn handle_rss(
     let host = headers
         .get(axum::http::header::HOST)
         .and_then(|h| h.to_str().ok())
-        .unwrap_or("localhost:3000");
+        .unwrap_or("localhost:8080");
     let proto = if headers.get("x-forwarded-proto").is_some() {
         "https"
     } else {
@@ -69,6 +71,59 @@ async fn handle_rss(
             .into_response(),
         Err(err) => {
             error!("Failed to format feed to RSS: {}", err);
+            (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                format!("Serialization failed: {}", err),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn handle_m3u(
+    State(registry): State<Arc<ProviderRegistry>>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    let url = match params.get("url") {
+        Some(u) if !u.trim().is_empty() => u.trim(),
+        _ => return (StatusCode::BAD_REQUEST, "Missing 'url' query parameter").into_response(),
+    };
+
+    info!("Received M3U request for URL: {}", url);
+
+    let feed = match registry.fetch_feed(url).await {
+        Ok(f) => f,
+        Err(err) => {
+            error!("Failed to fetch feed for URL '{}': {}", url, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to retrieve media feed: {}", err),
+            )
+                .into_response();
+        }
+    };
+
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("localhost:8080");
+    let proto = if headers.get("x-forwarded-proto").is_some() {
+        "https"
+    } else {
+        "http"
+    };
+    let host_uri = format!("{}://{}", proto, host);
+
+    let formatter = M3uFormatter;
+    match formatter.format(&feed, &host_uri) {
+        Ok(rendered_m3u) => (
+            [(axum::http::header::CONTENT_TYPE, "audio/x-mpegurl; charset=utf-8")],
+            rendered_m3u,
+        )
+            .into_response(),
+        Err(err) => {
+            error!("Failed to format feed to M3U: {}", err);
             (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 format!("Serialization failed: {}", err),

@@ -30,7 +30,7 @@ StreamPrism Core has **zero compile-time knowledge** of `yt-dlp`, Bilibili APIs,
                             ▼
  ┌────────────────────────────────────────────────────────┐
  │ 4. Output Formatters                                   │
- │    - RSS (Podcast XML), M3U (Playlist), WebDAV (VFS)   │
+ │    - RSS (Podcast XML) [implemented], M3U (Playlist) [implemented]; WebDAV (VFS) [planned] │
  └────────────────────────────────────────────────────────┘
 ```
 
@@ -182,9 +182,12 @@ Client Request (e.g. /feed/rss?url=https://youtube.com/...)
 ## 5. Playback & Streaming Redirection
 
 ### 5.1 YouTube (302 Redirect)
-When a client requests `/play?url=https://youtube.com/watch?v=...`, Core executes the provider's `resolve_stream` action. It parses the resulting stream URL from the response and redirects the client player with an `HTTP 302 Found`.
+When a client requests `/resolve?url=https://youtube.com/watch?v=...`, Core executes the provider's `resolve_stream` action. It parses the resulting stream URL from the response and redirects the client player with an `HTTP 302 Found`.
 
-### 5.2 Bilibili (Proxying)
+### 5.2 Bilibili (Proxying) — [PLANNED]
+
+> **Note**: Proxy streaming is not yet implemented as of v0.1.0. See [Roadmap](../README.md#roadmap).
+
 For providers requiring specific headers or CORS handling, the provider's manifest can specify a proxy flag:
 ```yaml
 actions:
@@ -200,7 +203,9 @@ If `proxy_response` is enabled, instead of sending a 302 redirect, StreamPrism p
 
 ---
 
-## 6. WebDAV Virtual Filesystem (VFS)
+## 6. WebDAV Virtual Filesystem (VFS) — [PLANNED]
+
+> **Note**: WebDAV VFS is not yet implemented as of v0.1.0. See [Roadmap](../README.md#roadmap).
 
 For integration with Jellyfin, Emby, and Kodi, StreamPrism runs an in-memory WebDAV server using the loaded manifests.
 

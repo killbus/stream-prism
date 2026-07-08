@@ -1,4 +1,5 @@
 pub mod rss;
+pub mod m3u;
 
 use crate::model::MediaFeed;
 

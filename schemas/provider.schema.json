@@ -111,24 +111,6 @@
           }
         }
       }
-    },
-    "delivery": {
-      "type": "object",
-      "required": ["mode"],
-      "properties": {
-        "mode": {
-          "type": "string",
-          "enum": ["redirect", "proxy"],
-          "description": "Media stream delivery mode. 'redirect' for direct HTTP 302, 'proxy' for server-proxied streaming."
-        },
-        "headers": {
-          "type": "object",
-          "description": "Optional HTTP headers to instruct smart clients or inject during requests (e.g. Referer)",
-          "additionalProperties": {
-            "type": "string"
-          }
-        }
-      }
     }
   },
   "definitions": {

@@ -58,6 +58,3 @@ response_mapping:
     duration: "$.duration"
     original_url: "$.webpage_url"
     thumbnail_url: "$.thumbnail"
-
-delivery:
-  mode: "redirect"
